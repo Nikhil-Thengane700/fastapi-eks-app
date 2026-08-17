@@ -5,7 +5,6 @@ pipeline {
         AWS_REGION      = 'ap-south-1'
         ECR_REPO_URI    = '304485839932.dkr.ecr.ap-south-1.amazonaws.com/fastapi-eks-app'
         AWS_CREDS       = credentials('aws-ecr-creds')
-        SONAR_SCANNER_HOME = tool 'SonarScanner'
     }
 
     stages {
