@@ -42,7 +42,7 @@ pipeline {
                     agent {
                         docker {
                             image 'sonarsource/sonar-scanner-cli:latest'
-                            args '-u root'
+                            args '-u root --network host'
                         }
                     }
                     steps {
