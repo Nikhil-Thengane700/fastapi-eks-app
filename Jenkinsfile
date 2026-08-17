@@ -24,7 +24,10 @@ pipeline {
             parallel {
                 stage('Unit Tests') {
                     agent {
-                        docker { image 'python:3.12-slim' }
+                        docker {
+                            image 'python:3.12-slim'
+                            args '-u root'
+                        }
                     }
                     steps {
                         unstash 'workspace'
@@ -37,7 +40,10 @@ pipeline {
                 }
                 stage('SonarQube Scan') {
                     agent {
-                        docker { image 'sonarsource/sonar-scanner-cli:latest' }
+                        docker {
+                            image 'sonarsource/sonar-scanner-cli:latest'
+                            args '-u root'
+                        }
                     }
                     steps {
                         unstash 'workspace'
@@ -67,7 +73,7 @@ pipeline {
             agent {
                 docker {
                     image 'docker:24-cli'
-                    args '-v /var/run/docker.sock:/var/run/docker.sock'
+                    args '-v /var/run/docker.sock:/var/run/docker.sock -u root'
                 }
             }
             steps {
@@ -80,7 +86,7 @@ pipeline {
             agent {
                 docker {
                     image 'aquasec/trivy:latest'
-                    args '-v /var/run/docker.sock:/var/run/docker.sock --entrypoint=""'
+                    args '-v /var/run/docker.sock:/var/run/docker.sock --entrypoint="" -u root'
                 }
             }
             steps {
@@ -92,7 +98,7 @@ pipeline {
             agent {
                 docker {
                     image 'amazon/aws-cli:latest'
-                    args '-v /var/run/docker.sock:/var/run/docker.sock --entrypoint=""'
+                    args '-v /var/run/docker.sock:/var/run/docker.sock --entrypoint="" -u root'
                 }
             }
             steps {
