@@ -45,6 +45,7 @@ pipeline {
                     steps {
                         unstash 'workspace'
                         withCredentials([string(credentialsId: 'sonarcloud-token', variable: 'SONAR_TOKEN')]) {
+                            // The scanner automatically picks up the SONAR_TOKEN environment variable
                             sh '''
                                 sonar-scanner \
                                 -Dsonar.projectKey=Nikhil-Thengane700_fastapi-eks-app \
@@ -52,7 +53,6 @@ pipeline {
                                 -Dsonar.sources=app \
                                 -Dsonar.python.version=3.12 \
                                 -Dsonar.host.url=https://sonarcloud.io \
-                                -Dsonar.token=${SONAR_TOKEN} \
                                 -Dsonar.userHome=${WORKSPACE}/.sonar
                             '''
                         }
