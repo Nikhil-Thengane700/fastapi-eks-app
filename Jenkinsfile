@@ -106,11 +106,12 @@ pipeline {
             }
         }
 
-        stage('Trivy Scan') {
+       stage('Trivy Scan') {
             agent {
                 docker {
                     image 'aquasec/trivy:latest'
-                    args '-v /var/run/docker.sock:/var/run/docker.sock --entrypoint=/bin/sh -u root'
+                    // Fix: Changed --entrypoint=/bin/sh to --entrypoint="" to prevent Jenkins conflict
+                    args '-v /var/run/docker.sock:/var/run/docker.sock --entrypoint="" -u root'
                 }
             }
             steps {
