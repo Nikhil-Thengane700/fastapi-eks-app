@@ -160,10 +160,3 @@ pipeline {
         }
     }
 }
-        always {
-            node('') {
-                sh 'docker system prune -f || true'
-            }
-        }
-    }
-}
