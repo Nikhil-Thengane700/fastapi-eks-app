@@ -118,6 +118,19 @@ pipeline {
             }
         }
 
+        stage('Get ECR Token') {
+            agent {
+                docker {
+                    image 'amazon/aws-cli:latest'
+                    args '--entrypoint=/bin/sh'
+                }
+            }
+            steps {
+                sh "aws ecr get-login-password --region ${AWS_REGION} > ecr_token.txt"
+                stash includes: 'ecr_token.txt', name: 'ecr-token'
+            }
+        }
+
         stage('Push to ECR') {
             agent {
                 docker {
@@ -126,9 +139,9 @@ pipeline {
                 }
             }
             steps {
+                unstash 'ecr-token'
                 sh """
-                    apk add --no-cache aws-cli
-                    aws ecr get-login-password --region ${AWS_REGION} | docker login --username AWS --password-stdin ${ECR_REPO_URI}
+                    cat ecr_token.txt | docker login --username AWS --password-stdin ${ECR_REPO_URI}
                     docker push ${ECR_REPO_URI}:${env.IMAGE_TAG}
                 """
             }
