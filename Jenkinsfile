@@ -42,7 +42,7 @@ pipeline {
                     agent {
                         docker {
                             image 'sonarsource/sonar-scanner-cli:latest'
-                            args '-u root --network host'
+                            args '-u root'
                         }
                     }
                     steps {
@@ -50,11 +50,13 @@ pipeline {
                         withSonarQubeEnv('SonarQube') {
                             sh '''
                                 sonar-scanner \
-                                -Dsonar.projectKey=fastapi-eks-app \
+                                -Dsonar.projectKey=Nikhil-Thengane700_fastapi-eks-app \
+                                -Dsonar.organization=nikhil-thengane700 \
                                 -Dsonar.sources=app \
                                 -Dsonar.python.version=3.12
                             '''
                         }
+                        stash includes: '.scannerwork/report-task.txt', name: 'sonar-report'
                     }
                 }
             }
@@ -63,8 +65,30 @@ pipeline {
         stage('Quality Gate') {
             agent any
             steps {
-                timeout(time: 5, unit: 'MINUTES') {
-                    waitForQualityGate abortPipeline: true
+                unstash 'sonar-report'
+                withCredentials([string(credentialsId: 'sonarcloud-token', variable: 'SONAR_TOKEN')]) {
+                    sh '''
+                        REPORT_FILE=".scannerwork/report-task.txt"
+                        CE_TASK_URL=$(grep ceTaskUrl= "$REPORT_FILE" | cut -d'=' -f2-)
+
+                        STATUS="PENDING"
+                        for i in $(seq 1 30); do
+                            STATUS=$(curl -s -u ${SONAR_TOKEN}: "$CE_TASK_URL" | grep -o '"status":"[A-Z]*"' | head -1 | cut -d'"' -f4)
+                            if [ "$STATUS" = "SUCCESS" ]; then
+                                break
+                            fi
+                            sleep 5
+                        done
+
+                        ANALYSIS_ID=$(curl -s -u ${SONAR_TOKEN}: "$CE_TASK_URL" | grep -o '"analysisId":"[^"]*"' | cut -d'"' -f4)
+                        QG_STATUS=$(curl -s -u ${SONAR_TOKEN}: "https://sonarcloud.io/api/qualitygates/project_status?analysisId=${ANALYSIS_ID}" | grep -o '"status":"[A-Z]*"' | head -1 | cut -d'"' -f4)
+
+                        echo "Quality Gate Status: ${QG_STATUS}"
+                        if [ "$QG_STATUS" != "OK" ]; then
+                            echo "Quality Gate failed"
+                            exit 1
+                        fi
+                    '''
                 }
             }
         }
@@ -86,7 +110,7 @@ pipeline {
             agent {
                 docker {
                     image 'aquasec/trivy:latest'
-                    args '-v /var/run/docker.sock:/var/run/docker.sock --entrypoint="" -u root'
+                    args '-v /var/run/docker.sock:/var/run/docker.sock --entrypoint=/bin/sh -u root'
                 }
             }
             steps {
@@ -97,12 +121,13 @@ pipeline {
         stage('Push to ECR') {
             agent {
                 docker {
-                    image 'amazon/aws-cli:latest'
-                    args '-v /var/run/docker.sock:/var/run/docker.sock --entrypoint="" -u root'
+                    image 'docker:24-cli'
+                    args '-v /var/run/docker.sock:/var/run/docker.sock -u root'
                 }
             }
             steps {
                 sh """
+                    apk add --no-cache aws-cli
                     aws ecr get-login-password --region ${AWS_REGION} | docker login --username AWS --password-stdin ${ECR_REPO_URI}
                     docker push ${ECR_REPO_URI}:${env.IMAGE_TAG}
                 """
@@ -128,6 +153,13 @@ pipeline {
     }
 
     post {
+        always {
+            node('') {
+                sh 'docker image prune -f || true'
+            }
+        }
+    }
+}
         always {
             node('') {
                 sh 'docker system prune -f || true'
