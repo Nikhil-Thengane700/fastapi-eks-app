@@ -24,10 +24,10 @@ pipeline {
             parallel {
                 stage('Unit Tests') {
                     agent {
-                        docker {
-                            image 'python:3.12-slim'
-                            args '-u root'
-                        }
+                        docker { image 'python:3.12-slim' }
+                    }
+                    environment {
+                        HOME = "${WORKSPACE}"
                     }
                     steps {
                         unstash 'workspace'
@@ -40,20 +40,20 @@ pipeline {
                 }
                 stage('SonarQube Scan') {
                     agent {
-                        docker {
-                            image 'sonarsource/sonar-scanner-cli:latest'
-                            args '-u root'
-                        }
+                        docker { image 'sonarsource/sonar-scanner-cli:latest' }
                     }
                     steps {
                         unstash 'workspace'
-                        withSonarQubeEnv('SonarQube') {
+                        withCredentials([string(credentialsId: 'sonarcloud-token', variable: 'SONAR_TOKEN')]) {
                             sh '''
                                 sonar-scanner \
                                 -Dsonar.projectKey=Nikhil-Thengane700_fastapi-eks-app \
                                 -Dsonar.organization=nikhil-thengane700 \
                                 -Dsonar.sources=app \
-                                -Dsonar.python.version=3.12
+                                -Dsonar.python.version=3.12 \
+                                -Dsonar.host.url=https://sonarcloud.io \
+                                -Dsonar.token=${SONAR_TOKEN} \
+                                -Dsonar.userHome=${WORKSPACE}/.sonar
                             '''
                         }
                         stash includes: '.scannerwork/report-task.txt', name: 'sonar-report'
