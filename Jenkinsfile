@@ -126,7 +126,19 @@ pipeline {
                     args '--entrypoint=/bin/sh'
                 }
             }
+            stepsstage('Get ECR Token') {
+            agent {
+                docker {
+                    image 'amazon/aws-cli:latest'
+                    // Fix: Overriding entrypoint so Jenkins doesn't try to run 'aws cat'
+                    args '--entrypoint=""' 
+                }
+            }
             steps {
+                sh "aws ecr get-login-password --region ${AWS_REGION} > ecr_token.txt"
+                stash includes: 'ecr_token.txt', name: 'ecr-token'
+            }
+        } {
                 sh "aws ecr get-login-password --region ${AWS_REGION} > ecr_token.txt"
                 stash includes: 'ecr_token.txt', name: 'ecr-token'
             }
