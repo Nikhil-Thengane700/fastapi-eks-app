@@ -95,7 +95,7 @@ pipeline {
         stage('Docker Build') {
             agent {
                 docker {
-                    image 'docker:24-cli'
+                    image 'docker:27-cli'
                     args '-v /var/run/docker.sock:/var/run/docker.sock -u root'
                 }
             }
@@ -133,7 +133,7 @@ pipeline {
         stage('Push to ECR') {
             agent {
                 docker {
-                    image 'docker:24-cli'
+                    image 'docker:27-cli'
                     args '-v /var/run/docker.sock:/var/run/docker.sock -u root'
                 }
             }
