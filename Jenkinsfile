@@ -45,7 +45,6 @@ pipeline {
                     steps {
                         unstash 'workspace'
                         withCredentials([string(credentialsId: 'sonarcloud-token', variable: 'SONAR_TOKEN')]) {
-                            // The scanner automatically picks up the SONAR_TOKEN environment variable
                             sh '''
                                 sonar-scanner \
                                 -Dsonar.projectKey=Nikhil-Thengane700_fastapi-eks-app \
@@ -106,11 +105,10 @@ pipeline {
             }
         }
 
-       stage('Trivy Scan') {
+        stage('Trivy Scan') {
             agent {
                 docker {
                     image 'aquasec/trivy:latest'
-                    // Fix: Changed --entrypoint=/bin/sh to --entrypoint="" to prevent Jenkins conflict
                     args '-v /var/run/docker.sock:/var/run/docker.sock --entrypoint="" -u root'
                 }
             }
@@ -123,22 +121,10 @@ pipeline {
             agent {
                 docker {
                     image 'amazon/aws-cli:latest'
-                    args '--entrypoint=/bin/sh'
-                }
-            }
-            stepsstage('Get ECR Token') {
-            agent {
-                docker {
-                    image 'amazon/aws-cli:latest'
-                    // Fix: Overriding entrypoint so Jenkins doesn't try to run 'aws cat'
-                    args '--entrypoint=""' 
+                    args '--entrypoint=""'
                 }
             }
             steps {
-                sh "aws ecr get-login-password --region ${AWS_REGION} > ecr_token.txt"
-                stash includes: 'ecr_token.txt', name: 'ecr-token'
-            }
-        } {
                 sh "aws ecr get-login-password --region ${AWS_REGION} > ecr_token.txt"
                 stash includes: 'ecr_token.txt', name: 'ecr-token'
             }
